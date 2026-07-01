@@ -9,7 +9,7 @@
   "packageManager": "npm@10.8.2",
   "scripts": {
     "dev": "vite",
-    "build": "node ./node_modules/typescript/bin/tsc && npx vite build"
+    "build": "node ./node_modules/typescript/bin/tsc && node ./node_modules/vite/bin/vite.js build"
   },
   "dependencies": {
     "framer-motion": "^12.42.2",
