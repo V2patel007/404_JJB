@@ -197,8 +197,8 @@ export default function NotFound() {
     const now = context.currentTime;
     const master = context.createGain();
     master.gain.setValueAtTime(0.0001, now);
-    master.gain.exponentialRampToValueAtTime(0.035, now + 0.01);
-    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+    master.gain.exponentialRampToValueAtTime(0.12, now + 0.01);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
     master.connect(context.destination);
 
     const playTone = (frequency: number, duration: number, wave: OscillatorType, volume = 0.7) => {
