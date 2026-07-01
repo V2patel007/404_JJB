@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState, type TouchEvent } from "react";
 
 type BrickTypeId = "traditional" | "linear" | "limousine";
+type SoundKind = "move" | "rotate" | "drop" | "clear" | "gameOver" | "pause";
 
 interface ParticleState {
   id: number;
@@ -164,11 +165,79 @@ export default function NotFound() {
   const dustTimeouts = useRef<number[]>([]);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const swipeTimeoutRef = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioUnlockedRef = useRef(false);
 
   const triggerSwipeFeedback = (label: string) => {
     setSwipeFeedback(label);
     if (swipeTimeoutRef.current) window.clearTimeout(swipeTimeoutRef.current);
     swipeTimeoutRef.current = window.setTimeout(() => setSwipeFeedback(null), 180);
+  };
+
+  const ensureAudioReady = () => {
+    if (typeof window === "undefined") return;
+    if (!audioContextRef.current) {
+      const AudioCtx = window.AudioContext || (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      audioContextRef.current = new AudioCtx();
+    }
+
+    const context = audioContextRef.current;
+    if (!audioUnlockedRef.current && context.state === "suspended") {
+      void context.resume();
+    }
+    audioUnlockedRef.current = true;
+  };
+
+  const playSound = (kind: SoundKind) => {
+    ensureAudioReady();
+    const context = audioContextRef.current;
+    if (!context) return;
+
+    const now = context.currentTime;
+    const master = context.createGain();
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(0.035, now + 0.01);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+    master.connect(context.destination);
+
+    const playTone = (frequency: number, duration: number, wave: OscillatorType, volume = 0.7) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = wave;
+      oscillator.frequency.setValueAtTime(frequency, now);
+      gain.gain.setValueAtTime(volume, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      oscillator.connect(gain);
+      gain.connect(master);
+      oscillator.start(now);
+      oscillator.stop(now + duration);
+    };
+
+    switch (kind) {
+      case "move":
+        playTone(540, 0.05, "triangle", 0.3);
+        break;
+      case "rotate":
+        playTone(680, 0.06, "sine", 0.28);
+        break;
+      case "drop":
+        playTone(320, 0.07, "square", 0.22);
+        break;
+      case "clear":
+        playTone(520, 0.06, "triangle", 0.24);
+        playTone(760, 0.09, "sine", 0.2);
+        break;
+      case "gameOver":
+        playTone(260, 0.08, "sawtooth", 0.26);
+        playTone(200, 0.12, "sawtooth", 0.2);
+        break;
+      case "pause":
+        playTone(420, 0.04, "square", 0.18);
+        break;
+      default:
+        break;
+    }
   };
 
   const settleActivePiece = (prev: BoardState, piece: FallingPiece, landRow: number) => {
@@ -188,6 +257,12 @@ export default function NotFound() {
     }));
 
     const bursts = [landDust, ...clearDust];
+    if (fullRows.length) {
+      playSound("clear");
+    } else {
+      playSound("drop");
+    }
+
     bursts.forEach((burst) => {
       const timeoutId = window.setTimeout(() => {
         setBoardState((current) => ({ ...current, dust: current.dust.filter((item) => item.id !== burst.id) }));
@@ -258,18 +333,19 @@ export default function NotFound() {
       switch (action) {
         case "left": {
           const nextPiece = { ...piece, col: piece.col - 1 };
-          return canOccupy(prev.grid, nextPiece, prev.activeRow)
-            ? { ...prev, activePiece: nextPiece }
-            : prev;
+          if (!canOccupy(prev.grid, nextPiece, prev.activeRow)) return prev;
+          playSound("move");
+          return { ...prev, activePiece: nextPiece };
         }
         case "right": {
           const nextPiece = { ...piece, col: piece.col + 1 };
-          return canOccupy(prev.grid, nextPiece, prev.activeRow)
-            ? { ...prev, activePiece: nextPiece }
-            : prev;
+          if (!canOccupy(prev.grid, nextPiece, prev.activeRow)) return prev;
+          playSound("move");
+          return { ...prev, activePiece: nextPiece };
         }
         case "down": {
           if (canOccupy(prev.grid, piece, prev.activeRow + 1)) {
+            playSound("drop");
             return { ...prev, activeRow: prev.activeRow + 1, score: prev.score + 1 };
           }
           return settleActivePiece(prev, piece, findLandingRow(prev.grid, { ...piece, row: prev.activeRow }));
@@ -277,12 +353,13 @@ export default function NotFound() {
         case "rotate": {
           if (piece.length <= 1) return prev;
           const candidate = { ...piece, vertical: !piece.vertical, col: Math.min(piece.col, Math.max(0, COLS - (piece.vertical ? piece.length : 1))) };
-          return canOccupy(prev.grid, candidate, prev.activeRow)
-            ? { ...prev, activePiece: candidate }
-            : prev;
+          if (!canOccupy(prev.grid, candidate, prev.activeRow)) return prev;
+          playSound("rotate");
+          return { ...prev, activePiece: candidate };
         }
         case "drop": {
           const landingRow = findLandingRow(prev.grid, { ...piece, row: prev.activeRow });
+          playSound("drop");
           return {
             ...settleActivePiece(prev, piece, landingRow),
             score: prev.score + 2 * (landingRow - prev.activeRow),
@@ -319,7 +396,18 @@ export default function NotFound() {
   }, []);
 
   useEffect(() => {
+    const unlockAudio = () => {
+      ensureAudioReady();
+    };
+
+    window.addEventListener("pointerdown", unlockAudio, { once: true });
+    window.addEventListener("touchstart", unlockAudio, { once: true });
+    window.addEventListener("keydown", unlockAudio, { once: true });
+
     return () => {
+      window.removeEventListener("pointerdown", unlockAudio);
+      window.removeEventListener("touchstart", unlockAudio);
+      window.removeEventListener("keydown", unlockAudio);
       dustTimeouts.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
       dustTimeouts.current = [];
       if (swipeTimeoutRef.current) window.clearTimeout(swipeTimeoutRef.current);
@@ -337,6 +425,7 @@ export default function NotFound() {
         if (prev.activePiece || prev.gameOver || prev.paused) return prev;
         const piece = createPiece(idCounter);
         if (!canOccupy(prev.grid, piece, piece.row)) {
+          playSound("gameOver");
           return { ...prev, gameOver: true };
         }
         return { ...prev, activePiece: piece, activeRow: piece.row };
@@ -393,7 +482,10 @@ export default function NotFound() {
         case "p":
         case "P":
           event.preventDefault();
-          setBoardState((prev) => ({ ...prev, paused: !prev.paused }));
+          setBoardState((prev) => {
+            playSound("pause");
+            return { ...prev, paused: !prev.paused };
+          });
           break;
         case "r":
         case "R":
@@ -442,6 +534,7 @@ export default function NotFound() {
   }, [reducedMotion]);
 
   const resetGame = () => {
+    playSound("drop");
     setBoardState({
       grid: createEmptyGrid(),
       activePiece: null,
@@ -457,7 +550,10 @@ export default function NotFound() {
   };
 
   const togglePause = () => {
-    setBoardState((prev) => ({ ...prev, paused: !prev.paused }));
+    setBoardState((prev) => {
+      playSound("pause");
+      return { ...prev, paused: !prev.paused };
+    });
   };
 
   const handleGoHome = () => {
