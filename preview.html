@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>404 — Brick Stack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0E14;
+    --text:#F5F1EB;
+    --muted:#A9A29A;
+    --accent:#D97C52;
+    --accent-hover:#E8916B;
+    --board-bg:rgba(255,255,255,0.04);
+    --board-border:rgba(255,255,255,0.1);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);}
+  body{
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    color:var(--text);
+    min-height:100vh;
+    overflow-x:hidden;
+    position:relative;
+  }
+  .bg-grid{position:fixed;inset:0;opacity:.05;
+    background-image:linear-gradient(to right,#fff 1px,transparent 1px),linear-gradient(to bottom,#fff 1px,transparent 1px);
+    background-size:56px 56px; pointer-events:none;}
+  .bg-glow{position:fixed;inset:0;pointer-events:none;
+    background:
+      radial-gradient(60% 50% at 25% 40%, rgba(217,124,82,0.16) 0%, transparent 70%),
+      radial-gradient(50% 40% at 80% 60%, rgba(91,141,239,0.12) 0%, transparent 70%);}
+  .bg-vignette{position:fixed;inset:0;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(0,0,0,0.65);}
+  .particles{position:fixed;inset:0;pointer-events:none;overflow:hidden;}
+  .particle{position:absolute;border-radius:50%;background:rgba(255,255,255,0.12);
+    animation:drift linear infinite;}
+  @keyframes drift{
+    0%{transform:translateY(0);opacity:.15;}
+    50%{opacity:.5;}
+    100%{transform:translateY(-40px);opacity:.15;}
+  }
+
+  .wrap{
+    position:relative;z-index:1;
+    max-width:1280px;margin:0 auto;
+    min-height:100vh;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:48px;
+    padding:64px 24px;
+  }
+  @media(min-width:1024px){
+    .wrap{flex-direction:row;justify-content:space-between;align-items:center;gap:64px;padding:0 64px;}
+  }
+
+  .hero{max-width:560px;text-align:center;display:flex;flex-direction:column;align-items:center;}
+  @media(min-width:1024px){.hero{text-align:left;align-items:flex-start;}}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin:0 0 16px;
+    opacity:0;animation:fadeUp .5s .1s ease-out forwards;}
+  h1.big{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:clamp(4.5rem,14vw,9rem);line-height:.9;letter-spacing:-0.02em;margin:0;
+    opacity:0;animation:fadeUp .5s .18s ease-out forwards;}
+  h2.sub{font-family:'Space Grotesk',sans-serif;font-weight:500;font-size:clamp(1.5rem,3vw,1.875rem);margin:20px 0 0;
+    opacity:0;animation:fadeUp .5s .26s ease-out forwards;}
+  p.desc{color:var(--muted);font-size:clamp(1rem,1.5vw,1.125rem);line-height:1.6;max-width:440px;margin:16px 0 0;
+    opacity:0;animation:fadeUp .5s .34s ease-out forwards;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+
+  .actions{display:flex;gap:12px;margin-top:36px;width:100%;flex-direction:column;
+    opacity:0;animation:fadeUp .5s .42s ease-out forwards;}
+  @media(min-width:640px){.actions{flex-direction:row;width:auto;}}
+  button{font-family:'Inter',sans-serif;font-size:15px;font-weight:500;padding:13px 26px;border-radius:8px;cursor:pointer;
+    border:1px solid transparent;transition:background-color .15s ease;}
+  .btn-primary{background:var(--accent);color:#1A140F;}
+  .btn-primary:hover{background:var(--accent-hover);}
+  .btn-secondary{background:rgba(255,255,255,0.05);color:var(--text);border-color:rgba(255,255,255,0.15);}
+  .btn-secondary:hover{background:rgba(255,255,255,0.1);}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  .board-outer{width:100%;max-width:280px;}
+  @media(min-width:640px){.board-outer{max-width:350px;}}
+  @media(min-width:1024px){.board-outer{max-width:500px;}}
+
+  .board{
+    position:relative;width:100%;aspect-ratio:10/20;
+    background:var(--board-bg);border:1px solid var(--board-border);border-radius:16px;
+    box-shadow:0 20px 60px -20px rgba(0,0,0,0.6);overflow:hidden;
+    backdrop-filter:blur(6px);
+  }
+  .board-gridlines{position:absolute;inset:0;opacity:.06;pointer-events:none;
+    background-image:linear-gradient(to right,#fff 1px,transparent 1px),linear-gradient(to bottom,#fff 1px,transparent 1px);}
+
+  .brick{position:absolute;border-radius:5px;border:1px solid rgba(0,0,0,0.35);
+    box-shadow:inset 0 1.5px 0 rgba(255,255,255,.25), inset 0 -2px 3px rgba(0,0,0,.35), 0 2px 4px rgba(0,0,0,.35);
+    transition: top .09s linear;}
+  .brick::after{content:"";position:absolute;inset:0;opacity:.18;mix-blend-mode:overlay;border-radius:5px;
+    background-image:radial-gradient(rgba(255,255,255,.9) .5px,transparent .5px),radial-gradient(rgba(0,0,0,.6) .5px,transparent .5px);
+    background-size:3px 3px,5px 5px;background-position:0 0,2px 2px;}
+  .brick.traditional{background:linear-gradient(155deg,#D97C52 0%, #B5502E 42%, #7A3319 100%);}
+  .brick.linear{background:linear-gradient(155deg,#CE7248 0%, #A8482B 42%, #6E2F16 100%);}
+  .brick.limousine{background:linear-gradient(155deg,#B85A34 0%, #8B3A22 42%, #5A230F 100%);}
+  .brick.glow{animation:glow .3s ease-out;}
+  @keyframes glow{0%{box-shadow:0 0 0 0 rgba(255,184,120,0);}30%{box-shadow:0 0 14px 4px rgba(255,184,120,.85);}100%{box-shadow:0 0 0 0 rgba(255,184,120,0);}}
+  @keyframes fallIn{from{opacity:0;transform:translateY(-14px) rotate(-6deg);}to{opacity:1;transform:translateY(0) rotate(0);}}
+  .brick.spawning{animation:fallIn .35s ease-out;}
+
+  .dust{position:absolute;border-radius:50%;background:#E8C9A8;pointer-events:none;
+    animation:dustPop .55s ease-out forwards;}
+  @keyframes dustPop{
+    from{transform:translate(0,0);opacity:.9;}
+    to{transform:translate(var(--dx),var(--dy));opacity:0;}
+  }
+
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+
+  @media (prefers-reduced-motion: reduce){
+    .eyebrow,h1.big,h2.sub,p.desc,.actions{animation:none;opacity:1;}
+    .particle{animation:none;opacity:.2;}
+    .board-live{display:none;}
+    .board-static{display:flex !important;}
+  }
+</style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+  <div class="bg-vignette"></div>
+  <div class="particles" id="particles" aria-hidden="true"></div>
+
+  <main class="wrap">
+    <section class="hero">
+      <p class="eyebrow">Error 404</p>
+      <h1 class="big">404</h1>
+      <h2 class="sub">Oops! This page couldn't find its place.</h2>
+      <p class="desc">Looks like this page fell into the wrong stack of bricks. Let's get you back where everything fits together.</p>
+      <div class="actions">
+        <button class="btn-primary" onclick="alert('Go Home clicked (wire this to your router)')">Go Home</button>
+        <button class="btn-secondary" onclick="alert('Go Back clicked (wire this to your router)')">Go Back</button>
+      </div>
+    </section>
+
+    <section class="board-outer">
+      <div class="board board-live" id="board" role="img" aria-label="Decorative animation of clay bricks endlessly falling and stacking, forming and clearing rows">
+        <div class="board-gridlines"></div>
+      </div>
+      <div class="board board-static" style="display:none;align-items:center;justify-content:center;">
+        <span class="sr-only">Decorative brick illustration (animation reduced per your system preference)</span>
+      </div>
+    </section>
+  </main>
+
+<script>
+(function(){
+  var COLS = 10, ROWS = 20;
+  var TYPES = {
+    traditional: {len:1, class:'traditional'},
+    linear: {len:4, class:'linear'},
+    limousine: {len:6, class:'limousine'}
+  };
+  var board = document.getElementById('board');
+  var cellSize = 0;
+  var grid = []; // grid[row][col] = {typeId, pieceId} | null
+  var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function initGrid(){
+    grid = [];
+    for(var r=0;r<ROWS;r++){ grid.push(new Array(COLS).fill(null)); }
+  }
+  initGrid();
+
+  function resize(){
+    cellSize = board.clientWidth / COLS;
+    render();
+  }
+  new ResizeObserver(resize).observe(board);
+
+  // ---- ambient background particles ----
+  var pWrap = document.getElementById('particles');
+  for(var i=0;i<22;i++){
+    var s = document.createElement('span');
+    s.className='particle';
+    var size = 1+Math.random()*2.5;
+    s.style.width=size+'px'; s.style.height=size+'px';
+    s.style.left=(Math.random()*100)+'%'; s.style.top=(Math.random()*100)+'%';
+    s.style.animationDuration=(14+Math.random()*18)+'s';
+    s.style.animationDelay=(-Math.random()*20)+'s';
+    pWrap.appendChild(s);
+  }
+
+  // ---- rendering ----
+  var settledEls = {}; // key "r-c" -> div
+  function render(){
+    // clear and redraw settled bricks (simple full redraw; board is small)
+    board.querySelectorAll('.settled').forEach(function(el){ el.remove(); });
+    for(var r=0;r<ROWS;r++){
+      for(var c=0;c<COLS;c++){
+        var cell = grid[r][c];
+        if(cell){
+          var el = document.createElement('div');
+          el.className = 'brick settled ' + TYPES[cell.typeId].class + (cell.glow ? ' glow' : '');
+          el.style.top = (r*cellSize)+'px';
+          el.style.left = (c*cellSize)+'px';
+          el.style.width = cellSize+'px';
+          el.style.height = cellSize+'px';
+          board.appendChild(el);
+        }
+      }
+    }
+  }
+
+  function pieceCells(piece, atRow){
+    var cells = [];
+    for(var i=0;i<piece.length;i++){
+      cells.push(piece.vertical ? {row: atRow+i, col: piece.col} : {row: atRow, col: piece.col+i});
+    }
+    return cells;
+  }
+  function canOccupy(piece, row){
+    var cells = pieceCells(piece, row);
+    for(var i=0;i<cells.length;i++){
+      var c = cells[i];
+      if(c.col<0||c.col>=COLS) return false;
+      if(c.row>=ROWS) return false;
+      if(c.row>=0 && grid[c.row][c.col]) return false;
+    }
+    return true;
+  }
+  function findLanding(piece){
+    var row = piece.row;
+    while(canOccupy(piece, row+1)) row++;
+    return row;
+  }
+  function settle(piece, landRow){
+    var cells = pieceCells(piece, landRow);
+    cells.forEach(function(c){
+      if(c.row>=0 && c.row<ROWS){ grid[c.row][c.col] = {typeId: piece.typeId, pieceId: piece.id}; }
+    });
+  }
+  function findFullRows(){
+    var rows=[];
+    for(var r=0;r<ROWS;r++){ if(grid[r].every(function(x){return !!x;})) rows.push(r); }
+    return rows;
+  }
+  function clearRows(rows){
+    if(!rows.length) return;
+    var rowSet = {}; rows.forEach(function(r){rowSet[r]=true;});
+    var remaining = grid.filter(function(_,i){return !rowSet[i];});
+    var blanks = rows.map(function(){ return new Array(COLS).fill(null); });
+    grid = blanks.concat(remaining);
+  }
+
+  function spawnDust(row, col, kind){
+    var count = kind==='clear' ? 10 : 6;
+    var spreadX = kind==='clear' ? cellSize*9 : cellSize*1.4;
+    var top = row*cellSize + cellSize/2;
+    var left = kind==='clear' ? cellSize*5 : col*cellSize + cellSize/2;
+    for(var i=0;i<count;i++){
+      var d = document.createElement('span');
+      d.className='dust';
+      var size = 2+Math.random()*3;
+      d.style.width=size+'px'; d.style.height=size+'px';
+      d.style.top=top+'px'; d.style.left=left+'px';
+      var dx=(Math.random()-0.5)*spreadX, dy=-(Math.random()*cellSize*1.2)-4;
+      d.style.setProperty('--dx', dx+'px');
+      d.style.setProperty('--dy', dy+'px');
+      d.style.animationDelay=(Math.random()*0.08)+'s';
+      board.appendChild(d);
+      (function(el){ setTimeout(function(){ el.remove(); }, 650); })(d);
+    }
+  }
+
+  var idCounter = 0;
+  function generatePiece(){
+    var roll = Math.random();
+    var typeId = roll < 0.08 ? 'limousine' : (roll < 0.36 ? 'linear' : 'traditional');
+    var def = TYPES[typeId];
+    var vertical = def.len>1 && Math.random()<0.35;
+    var span = vertical ? 1 : def.len;
+    var maxCol = Math.max(0, COLS-span);
+    var col = Math.floor(Math.random()*(maxCol+1));
+    idCounter++;
+    return {id:'p'+idCounter, typeId:typeId, length:def.len, vertical:vertical, col:col, row: vertical?-def.len:-1, speed:0.85+Math.random()*0.5};
+  }
+
+  var activePiece = null, activeRow = 0, activeEl = null;
+
+  function spawn(){
+    if(activePiece) return;
+    activePiece = generatePiece();
+    activeRow = activePiece.row;
+    var width = activePiece.vertical ? cellSize : cellSize*activePiece.length;
+    var height = activePiece.vertical ? cellSize*activePiece.length : cellSize;
+    activeEl = document.createElement('div');
+    activeEl.className = 'brick spawning ' + TYPES[activePiece.typeId].class;
+    activeEl.style.width = width+'px';
+    activeEl.style.height = height+'px';
+    activeEl.style.left = (activePiece.col*cellSize)+'px';
+    activeEl.style.top = (activeRow*cellSize)+'px';
+    board.appendChild(activeEl);
+  }
+
+  function tick(){
+    if(!activePiece){ return; }
+    var nextRow = activeRow+1;
+    if(canOccupy(activePiece, nextRow)){
+      activeRow = nextRow;
+      activeEl.style.top = (activeRow*cellSize)+'px';
+      return;
+    }
+    // land
+    var landRow = findLanding(activePiece);
+    settle(activePiece, landRow);
+    var lastCellRow = Math.min(landRow + activePiece.length - 1, ROWS-1);
+    spawnDust(lastCellRow, activePiece.col, 'land');
+
+    var fullRows = findFullRows();
+    if(activePiece.typeId==='limousine'){
+      grid[landRow] && grid[landRow][activePiece.col] && (grid[landRow][activePiece.col].glow = true);
+    }
+    activeEl.remove();
+    activeEl = null;
+    activePiece = null;
+    render();
+
+    if(fullRows.length){
+      fullRows.forEach(function(r){ spawnDust(r, 4, 'clear'); });
+      setTimeout(function(){ clearRows(fullRows); render(); }, 260);
+    }
+  }
+
+  var fallInterval, spawnTimeout;
+  function scheduleSpawn(){
+    var delay = 1400 + Math.random()*1200;
+    spawnTimeout = setTimeout(function(){ spawn(); scheduleSpawn(); }, delay);
+  }
+
+  function start(){
+    resize();
+    if(reducedMotion){
+      board.style.display='none';
+      document.querySelector('.board-static').style.display='flex';
+      return;
+    }
+    fallInterval = setInterval(tick, 90);
+    scheduleSpawn();
+    spawn();
+  }
+
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden){
+      clearInterval(fallInterval);
+    } else if(!reducedMotion){
+      fallInterval = setInterval(tick, 90);
+    }
+  });
+
+  window.addEventListener('load', start);
+})();
+</script>
+</body>
+</html>
