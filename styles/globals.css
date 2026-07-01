@@ -442,3 +442,79 @@ button:focus-visible {
 .sr-only {
   position: absolute;
   width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (min-width: 640px) {
+  .actions {
+    flex-direction: row;
+    width: auto;
+  }
+
+  .control-hint {
+    align-items: flex-start;
+    width: auto;
+  }
+
+  .swipe-hint {
+    text-align: left;
+  }
+
+  .game-stats,
+  .game-controls-row {
+    justify-content: flex-start;
+  }
+
+  .board-outer {
+    max-width: 360px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .wrap {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 64px;
+    padding: 0 64px;
+  }
+
+  .hero {
+    text-align: left;
+    align-items: flex-start;
+  }
+
+  .board-outer {
+    max-width: 500px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eyebrow,
+  .big,
+  .sub,
+  .desc,
+  .actions {
+    animation: none;
+    opacity: 1;
+  }
+
+  .particle {
+    animation: none;
+    opacity: 0.2;
+  }
+
+  .board-live {
+    display: none;
+  }
+
+  .board-static {
+    display: flex !important;
+  }
+}

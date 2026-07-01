@@ -589,4 +589,40 @@ export default function NotFound() {
                     return (
                       <div
                         key={`settled-${rowIndex}-${colIndex}`}
-                        className={`
+                        className={`brick ${brickClass}`}
+                        style={{ top: `${rowIndex * cellSize}px`, left: `${colIndex * cellSize}px`, width: `${cellSize}px`, height: `${cellSize}px` }}
+                      />
+                    );
+                  })
+                )}
+                {activePiece && (
+                  <div
+                    className={`brick spawning ${TYPES[activePiece.typeId].className}`}
+                    style={{ top: `${boardState.activeRow * cellSize}px`, left: `${activePiece.col * cellSize}px`, width: `${activePieceWidth}px`, height: `${activePieceHeight}px` }}
+                  />
+                )}
+                {boardState.dust.map((burst) => (
+                  <span
+                    key={burst.id}
+                    className="dust"
+                    style={{
+                      top: `${burst.row * cellSize + cellSize / 2}px`,
+                      left: `${burst.kind === "clear" ? cellSize * 5 : burst.col * cellSize + cellSize / 2}px`,
+                      width: `${2 + Math.random() * 3}px`,
+                      height: `${2 + Math.random() * 3}px`,
+                      ['--dx' as string]: `${(Math.random() - 0.5) * (burst.kind === "clear" ? cellSize * 9 : cellSize * 1.4)}px`,
+                      ['--dy' as string]: `${-(Math.random() * cellSize * 1.2) - 4}px`,
+                      animationDelay: `${Math.random() * 0.08}s`,
+                    }}
+                  />
+                ))}
+              </>
+            ) : (
+              <span className="sr-only">Decorative brick illustration (animation reduced per your system preference)</span>
+            )}
+          </div>
+        </section>
+      </main>
+    </>
+  );
+}
